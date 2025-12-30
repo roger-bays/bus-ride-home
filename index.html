@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photo Slideshow</title>
+    <title>Bus Ride Home Slideshow</title>
     <style>
         * {
             margin: 0;
@@ -178,13 +178,31 @@
         let slideshowStarted = false;
         let slideshowInterval = null;
         
-        // Start preloading images immediately
-        images.forEach((img, index) => {
-            const newImg = new Image();
-            newImg.onload = () => {
+        // Start preloading images immediately and aggressively
+        const imageUrls = [
+            'images/01-bus-ride-home-copyright-2024-roger-bays.jpg',
+            'images/02-bus-ride-home-copyright-2024-roger-bays.jpg',
+            'images/03-bus-ride-home-copyright-2024-roger-bays.jpg',
+            'images/04-bus-ride-home-copyright-2024-roger-bays.jpg',
+            'images/05-bus-ride-home-copyright-2024-roger-bays.jpg',
+            'images/06-bus-ride-home-copyright-2024-roger-bays.jpg',
+            'images/07-bus-ride-home-copyright-2024-roger-bays.jpg',
+            'images/08-bus-ride-home-copyright-2024-roger-bays.jpg',
+            'images/09-bus-ride-home-copyright-2024-roger-bays.jpg',
+            'images/10-bus-ride-home-copyright-2024-roger-bays.jpg'
+        ];
+        
+        // Preload images immediately on page load
+        imageUrls.forEach((url) => {
+            const img = new Image();
+            img.onload = () => {
                 imagesLoaded++;
+                console.log('Image loaded:', imagesLoaded, 'of 10');
             };
-            newImg.src = img.src;
+            img.onerror = () => {
+                console.error('Failed to load:', url);
+            };
+            img.src = url;
         });
         
         function goFullscreen() {
