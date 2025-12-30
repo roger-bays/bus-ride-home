@@ -35,6 +35,7 @@
             align-items: center;
             justify-content: center;
             background: #000;
+            opacity: 0;
         }
         
         .slide img {
@@ -43,27 +44,9 @@
             object-fit: contain;
         }
         
-        .fullscreen-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: rgba(255,255,255,0.9);
-            border: none;
-            padding: 15px 25px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            font-family: Arial, sans-serif;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-        
-        .fullscreen-btn:active {
-            background: rgba(255,255,255,0.7);
-        }
-        
         .slide.active {
             left: 0;
+            opacity: 1;
         }
         
         .slide.exit {
@@ -77,27 +60,81 @@
         @keyframes slideOut {
             from {
                 left: 0;
+                opacity: 1;
             }
             to {
                 left: 100%;
+                opacity: 1;
             }
         }
         
         @keyframes slideIn {
             from {
                 left: -100%;
+                opacity: 1;
             }
             to {
                 left: 0;
+                opacity: 1;
             }
+        }
+        
+        .start-btn {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            padding: 20px 40px;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: block;
+        }
+        
+        .start-btn:active {
+            background: rgba(255,255,255,0.7);
+        }
+        
+        .start-btn.hidden {
+            display: none;
+        }
+        
+        .countdown {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 999;
+            color: white;
+            font-size: 72px;
+            font-family: Arial, sans-serif;
+            font-weight: normal;
+            display: none;
+            text-align: center;
+        }
+        
+        .countdown.show {
+            display: block;
+        }
+        
+        .countdown-text {
+            font-size: 18px;
+            margin-bottom: 10px;
+            font-weight: normal;
         }
     </style>
 </head>
 <body>
-    <button class="fullscreen-btn" onclick="goFullscreen()">Enter Fullscreen</button>
+    <button class="start-btn" onclick="startSlideshow()">Start Slideshow</button>
+    <div class="countdown"></div>
     
     <div class="slideshow-container">
-        <div class="slide active">
+        <div class="slide">
             <img src="images/01-bus-ride-home-copyright-2024-roger-bays.jpg" alt="Image 1">
         </div>
         <div class="slide">
@@ -131,62 +168,103 @@
 
     <script>
         const slides = document.querySelectorAll('.slide');
+        const images = document.querySelectorAll('.slide img');
+        const startBtn = document.querySelector('.start-btn');
+        const countdownEl = document.querySelector('.countdown');
         let currentIndex = 0;
-        const displayTime = 5000; // 5 seconds
-        const transitionTime = 1000; // 1 second
-        const fullscreenBtn = document.querySelector('.fullscreen-btn');
+        const displayTime = 5000;
+        const transitionTime = 1000;
+        let imagesLoaded = 0;
+        let slideshowStarted = false;
+        let slideshowInterval = null;
+        
+        // Start preloading images immediately
+        images.forEach((img, index) => {
+            const newImg = new Image();
+            newImg.onload = () => {
+                imagesLoaded++;
+            };
+            newImg.src = img.src;
+        });
         
         function goFullscreen() {
             const elem = document.documentElement;
             if (elem.requestFullscreen) {
                 elem.requestFullscreen();
-            } else if (elem.webkitRequestFullscreen) { // Safari
+            } else if (elem.webkitRequestFullscreen) {
                 elem.webkitRequestFullscreen();
-            } else if (elem.msRequestFullscreen) { // IE11
+            } else if (elem.msRequestFullscreen) {
                 elem.msRequestFullscreen();
             }
-            
-            // Hide the button after entering fullscreen
-            fullscreenBtn.style.display = 'none';
-            
-            // Don't lock orientation - let it follow device orientation
         }
         
-        // Listen for fullscreen changes to show button when exiting
-        document.addEventListener('fullscreenchange', function() {
-            if (!document.fullscreenElement) {
-                fullscreenBtn.style.display = 'block';
-            }
-        });
+        function showCountdown() {
+            countdownEl.innerHTML = '<div class="countdown-text">Images still Downloading</div><div class="countdown-number"></div>';
+            countdownEl.classList.add('show');
+            const countdownNumber = countdownEl.querySelector('.countdown-number');
+            let count = 10;
+            
+            const countdownInterval = setInterval(() => {
+                // Check if all images are loaded
+                if (imagesLoaded >= 10) {
+                    clearInterval(countdownInterval);
+                    countdownEl.classList.remove('show');
+                    beginSlideshow();
+                } else {
+                    // Show countdown matching remaining images
+                    const remaining = 10 - imagesLoaded;
+                    countdownNumber.textContent = remaining;
+                }
+            }, 1000);
+        }
         
-        document.addEventListener('webkitfullscreenchange', function() {
-            if (!document.webkitFullscreenElement) {
-                fullscreenBtn.style.display = 'block';
+        function startSlideshow() {
+            startBtn.classList.add('hidden');
+            goFullscreen();
+            
+            // If all images already loaded, start immediately
+            if (imagesLoaded >= 10) {
+                beginSlideshow();
+            } else {
+                // Show countdown while waiting for images
+                showCountdown();
             }
-        });
+        }
         
-        // Auto-enter fullscreen on first tap/click anywhere
-        let hasInteracted = false;
-        document.addEventListener('click', function() {
-            if (!hasInteracted) {
-                hasInteracted = true;
-                goFullscreen();
+        function pauseSlideshow() {
+            if (slideshowInterval) {
+                clearInterval(slideshowInterval);
+                slideshowInterval = null;
             }
-        });
+        }
+        
+        function resumeSlideshow() {
+            if (slideshowStarted && !slideshowInterval) {
+                slideshowInterval = setInterval(nextSlide, displayTime + transitionTime);
+            }
+        }
+        
+        function beginSlideshow() {
+            if (slideshowStarted) return;
+            slideshowStarted = true;
+            
+            // Show first slide
+            slides[0].classList.add('active');
+            
+            // Start cycling
+            slideshowInterval = setInterval(nextSlide, displayTime + transitionTime);
+        }
         
         function nextSlide() {
             const current = slides[currentIndex];
             const nextIndex = (currentIndex + 1) % slides.length;
             const next = slides[nextIndex];
             
-            // Start exit animation for current slide
             current.classList.add('exit');
             current.classList.remove('active');
             
-            // Start enter animation for next slide
             next.classList.add('enter');
             
-            // After transition completes, update classes
             setTimeout(() => {
                 current.classList.remove('exit');
                 next.classList.remove('enter');
@@ -196,8 +274,26 @@
             currentIndex = nextIndex;
         }
         
-        // Start the slideshow
-        setInterval(nextSlide, displayTime + transitionTime);
+        // Listen for fullscreen exit to show button again
+        document.addEventListener('fullscreenchange', function() {
+            if (!document.fullscreenElement) {
+                startBtn.classList.remove('hidden');
+                pauseSlideshow();
+            } else {
+                startBtn.classList.add('hidden');
+                resumeSlideshow();
+            }
+        });
+        
+        document.addEventListener('webkitfullscreenchange', function() {
+            if (!document.webkitFullscreenElement) {
+                startBtn.classList.remove('hidden');
+                pauseSlideshow();
+            } else {
+                startBtn.classList.add('hidden');
+                resumeSlideshow();
+            }
+        });
     </script>
 </body>
 </html>
